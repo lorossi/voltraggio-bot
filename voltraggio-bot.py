@@ -93,7 +93,7 @@ class Telegram:
 def bot_started(context: CallbackContext):
     status = t.status
     for chat_id in status["admins"]:
-        message = "*Bot started*"
+        message = "*Il bot è stato avviato*"
         context.bot.send_message(chat_id=chat_id, text=message,
                                  parse_mode=ParseMode.MARKDOWN)
 
@@ -122,7 +122,7 @@ def reset(update, context):
     chat_id = update.effective_chat.id
     # This works only if the user is an admin
     if chat_id in t.status["admins"]:
-        message = "_Resetting..._"
+        message = "_Riavvio in corso..._"
         context.bot.send_message(chat_id=chat_id, text=message,
                                  parse_mode=ParseMode.MARKDOWN)
 
@@ -130,7 +130,7 @@ def reset(update, context):
         # System command to reload the python script
         os.execl(sys.executable, sys.executable, * sys.argv)
     else:
-        message = "*This command is for admins only*"
+        message = "*Questo comando è solo per admins*"
         context.bot.send_message(
             chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN)
 
@@ -141,7 +141,7 @@ def stop(update, context):
     chat_id = update.effective_chat.id
     # This works only if the user is an admin
     if chat_id in t.status["admins"]:
-        message = "_Bot stopped_"
+        message = "_Il bot è stato fermato_"
         context.bot.send_message(
             chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN)
         t.saveSettings()
@@ -150,7 +150,7 @@ def stop(update, context):
         os._exit()
         exit()
     else:
-        message = "*This command is for admins only*"
+        message = "*Questo comando è solo per admins*"
         context.bot.send_message(
             chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN)
 
@@ -163,7 +163,7 @@ def error(update, context):
     # admin message
     for chat_id in t.status["admins"]:
         # HECC
-        message = "*ERROR RAISED*"
+        message = "*ERRORE*"
         context.bot.send_message(chat_id=chat_id, text=message,
                                  parse_mode=ParseMode.MARKDOWN)
 
