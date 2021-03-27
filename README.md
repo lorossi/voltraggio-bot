@@ -1,3 +1,3 @@
 # Voltraggio Bot
 
-~LE PAROLE SONO IMPORTANTI!~
+```LE PAROLE SONO IMPORTANTI!```
