@@ -84,7 +84,10 @@ class Telegram:
         starts the bot
         """
 
-        self._updater = Updater(self._token, use_context=True)
+        self._updater = Updater(
+            self._settings["token"],
+            use_context=True
+        )
         self._dispatcher = self._updater.dispatcher
         self._jobqueue = self._updater.job_queue
 
