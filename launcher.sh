@@ -1,5 +1,3 @@
-cd /
-cd /home/pi/python_scripts/voltraggio-bot
-sleep 1m
+#!/usr/bin/env bash
+cd /home/pi/scripts/voltraggio-bot
 python3 voltraggio-bot.py &
-cd /

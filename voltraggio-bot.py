@@ -155,7 +155,7 @@ class Telegram:
 
     def _botResetCommand(self, update, context):
         """
-        Function that resets the bot 
+        Function that resets the bot
         Callback fired with command /reset
         """
 
