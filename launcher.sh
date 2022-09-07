@@ -1,6 +1,3 @@
-#!/usr/bin/env bash
+#!/bin/bash
 cd /home/pi/scripts/voltraggio-bot
-source venv/bin/activate
-python3 voltraggio-bot.py
-deactivate
-
+venv/bin/python3 voltraggio-bot.py
