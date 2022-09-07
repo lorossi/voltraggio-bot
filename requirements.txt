@@ -1,0 +1,2 @@
+telegram==0.0.1
+ujson==5.4.0
