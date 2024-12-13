@@ -14,13 +14,14 @@ import sys
 from datetime import datetime
 
 import ujson
-from telegram import ChatAction, ParseMode
+from click import Context
+from telegram import Update, constants
 from telegram.ext import (
-    CallbackContext,
+    Application,
     CommandHandler,
-    Filters,
+    ContextTypes,
     MessageHandler,
-    Updater,
+    filters,
 )
 
 
@@ -33,13 +34,13 @@ class Telegram:
         self._settings_path = "src/settings.json"
         self._loadSettings()
 
-    def _loadSettings(self):
+    def _loadSettings(self) -> None:
         """Load settings from the settings file."""
         with open(self._settings_path) as json_file:
             # only keeps settings for Telegram, discarding others
             self._settings = ujson.load(json_file)
 
-    def _saveSettings(self):
+    def _saveSettings(self) -> None:
         """Save settings into file."""
         with open(self._settings_path) as json_file:
             old_settings = ujson.load(json_file)
@@ -54,56 +55,57 @@ class Telegram:
     # Setters/getters
 
     @property
-    def _admins(self):
+    def _admins(self) -> list[str]:
         return self._settings["admins"]
 
     @property
-    def _image_path(self):
+    def _image_path(self) -> str:
         return self._settings["image_path"]
 
     @property
-    def _start_date(self):
+    def _start_date(self) -> str:
         return self._settings["start_date"]
 
     @property
-    def _gif_sent(self):
+    def _gif_sent(self) -> int:
         return self._settings["gif_sent"]
 
     @_gif_sent.setter
-    def _gif_sent(self, value):
+    def _gif_sent(self, value: int) -> None:
         self._settings["gif_sent"] = value
         self._saveSettings()
 
     @property
-    def _trigger_map(self):
+    def _trigger_map(self) -> dict[str, str]:
         return self._settings["trigger_map"]
 
     @property
-    def _fish_gif_path(self):
+    def _fish_gif_path(self) -> str:
         return self._settings["fish_gif_path"]
 
-    def start(self):
+    def start(self) -> None:
         """Start the bot."""
-        self._updater = Updater(self._settings["token"], use_context=True)
-        self._dispatcher = self._updater.dispatcher
-        self._jobqueue = self._updater.job_queue
+        self._application = Application.builder().token(self._settings["token"]).build()
+        self._jobqueue = self._application.job_queue
 
-        self._dispatcher.add_error_handler(self._botError)
         self._jobqueue.run_once(self._botStarted, when=0, name="bot_started")
 
-        self._dispatcher.add_handler(CommandHandler("start", self._botStartCommand))
-        self._dispatcher.add_handler(CommandHandler("gauss", self._botGaussCommand))
-        self._dispatcher.add_handler(CommandHandler("stop", self._botStopCommand))
-        self._dispatcher.add_handler(CommandHandler("ping", self._botPingCommand))
-        self._dispatcher.add_handler(CommandHandler("reset", self._botResetCommand))
-        self._dispatcher.add_handler(CommandHandler("stats", self._botStatsCommand))
-        self._dispatcher.add_handler(MessageHandler(Filters.text, self._botTextMessage))
+        self._application.add_error_handler(self._botError)
 
-        self._updater.start_polling()
+        self._application.add_handler(CommandHandler("start", self._botStartCommand))
+        self._application.add_handler(CommandHandler("gauss", self._botGaussCommand))
+        self._application.add_handler(CommandHandler("stop", self._botStopCommand))
+        self._application.add_handler(CommandHandler("ping", self._botPingCommand))
+        self._application.add_handler(CommandHandler("reset", self._botResetCommand))
+        self._application.add_handler(CommandHandler("stats", self._botStatsCommand))
+        self._application.add_handler(
+            MessageHandler(filters.TEXT & (~filters.COMMAND), self._botTextMessage)
+        )
+
+        self._application.run_polling()
         logging.info("Bot started")
-        self._updater.idle()
 
-    def _botStarted(self, context: CallbackContext):
+    async def _botStarted(self, context: ContextTypes) -> None:
         """
         Send a message to admins whenever the bot is started.
 
@@ -111,11 +113,13 @@ class Telegram:
         """
         message = "*Il bot è stato avviato*"
         for chat_id in self._admins:
-            context.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=message,
+                parse_mode=constants.ParseMode.MARKDOWN,
             )
 
-    def _botStartCommand(self, update, context):
+    async def _botStartCommand(self, update: Update, context: ContextTypes) -> None:
         """
         Greet user during first start.
 
@@ -123,11 +127,13 @@ class Telegram:
         """
         chat_id = update.effective_chat.id
         message = "_Sono pronto a correggere chiunque dica boiate_"
-        context.bot.send_message(
-            chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=message,
+            parse_mode=constants.ParseMode.MARKDOWN,
         )
 
-    def _botPingCommand(self, update, context):
+    async def _botPingCommand(self, update: Update, context: ContextTypes) -> None:
         """
         Simply replies "PONG".
 
@@ -135,11 +141,13 @@ class Telegram:
         """
         chat_id = update.effective_chat.id
         message = "🏓 *PONG* 🏓"
-        context.bot.send_message(
-            chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=message,
+            parse_mode=constants.ParseMode.MARKDOWN,
         )
 
-    def _botResetCommand(self, update, context):
+    async def _botResetCommand(self, update: Update, context: ContextTypes) -> None:
         """
         Reset the bot.
 
@@ -149,8 +157,10 @@ class Telegram:
         # This works only if the user is an admin
         if chat_id in self._admins:
             message = "_Riavvio in corso..._"
-            context.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=message,
+                parse_mode=constants.ParseMode.MARKDOWN,
             )
 
             logging.warning("Resetting")
@@ -158,11 +168,13 @@ class Telegram:
             os.execl(sys.executable, sys.executable, *sys.argv)
         else:
             message = "*Questo comando è solo per admins*"
-            context.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=message,
+                parse_mode=constants.ParseMode.MARKDOWN,
             )
 
-    def _botStopCommand(self, update, context):
+    async def _botStopCommand(self, update: Update, context: ContextTypes) -> None:
         """
         Stop the bot.
 
@@ -172,8 +184,10 @@ class Telegram:
         # This works only if the user is an admin
         if chat_id in self._admins:
             message = "_Il bot è stato fermato_"
-            context.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=message,
+                parse_mode=constants.ParseMode.MARKDOWN,
             )
             self._saveSettings()
             self._updater.stop()
@@ -181,11 +195,13 @@ class Telegram:
             os._exit()
         else:
             message = "*Questo comando è solo per admins*"
-            context.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=message,
+                parse_mode=constants.ParseMode.MARKDOWN,
             )
 
-    def _botError(self, update, context):
+    async def _botError(self, update: Update, context: ContextTypes) -> None:
         logging.error(context.error)
 
         """
@@ -197,11 +213,13 @@ class Telegram:
         for chat_id in self._admins:
             # HECC
             message = "*ERRORE*"
-            context.bot.send_message(
-                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=message,
+                parse_mode=constants.ParseMode.MARKDOWN,
             )
 
-        error_string = str(context.error).replace("_", "\\_")  # MARKDOWN escape
+        error_string = str(context.error)
         time_string = datetime.now().isoformat()
 
         message = (
@@ -211,34 +229,42 @@ class Telegram:
         )
 
         for chat_id in self._admins:
-            context.bot.send_message(chat_id=chat_id, text=message)
+            await context.bot.send_message(chat_id=chat_id, text=message)
 
         # logs to file
         logging.error('Update "%s" caused error "%s"', update, context.error)
 
-    def _botGaussCommand(self, update, context):
+    async def _botGaussCommand(self, update: Update, context: ContextTypes) -> None:
         """
         Send a photo of Gauss.
 
         Callback fired with command /gauss
         """
         chat_id = update.effective_chat.id
-        context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+        await context.bot.send_chat_action(
+            chat_id=chat_id,
+            action=constants.ChatAction.TYPING,
+        )
 
         caption = "*Johann Carl Friedrich Gauß*"
         photo = open(self._image_path, "rb")
-        context.bot.send_photo(
-            chat_id=chat_id, photo=photo, caption=caption, parse_mode=ParseMode.MARKDOWN
+        await context.bot.send_photo(
+            chat_id=chat_id,
+            photo=photo,
+            caption=caption,
+            parse_mode=constants.ParseMode.MARKDOWN,
         )
 
-    def _botStatsCommand(self, update, context):
+    async def _botStatsCommand(self, update: Update, context: ContextTypes) -> None:
         """
         Return stats about the bot.
 
         Callback fired with command  /stats
         """
         chat_id = update.effective_chat.id
-        context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+        await context.bot.send_chat_action(
+            chat_id=chat_id, action=constants.ChatAction.TYPING
+        )
 
         # bot started date
         d1 = datetime.fromisoformat(self._start_date)
@@ -254,13 +280,13 @@ class Telegram:
             f"per una media di *{average}* gif al giorno!"
         )
         # Send text message
-        context.bot.send_message(
+        await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=message,
-            parse_mode=ParseMode.MARKDOWN,
+            parse_mode=constants.ParseMode.MARKDOWN,
         )
 
-    def _botTextMessage(self, update, context):
+    async def _botTextMessage(self, update: Update, context: ContextTypes) -> None:
         """
         Send the gif.
 
@@ -278,24 +304,27 @@ class Telegram:
         for key in self._trigger_map:
             # if key in user_message:
             if re.search(r"\b" + key + r"\b", user_message):
-                context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+                await context.bot.send_chat_action(
+                    chat_id=chat_id,
+                    action=constants.ChatAction.TYPING,
+                )
                 # prepare the message
                 message = f"*SI DICE {self._trigger_map[key]}*"
                 # send the message
                 with open(self._fish_gif_path, "rb") as animation:
-                    context.bot.send_animation(
+                    await context.bot.send_animation(
                         chat_id,
                         animation,
                         reply_to_message_id=message_id,
                         caption=message,
-                        parse_mode=ParseMode.MARKDOWN,
+                        parse_mode=constants.ParseMode.MARKDOWN,
                     )
                 # update the number of sent images
                 self._gif_sent += 1
 
 
 # main entry point
-def main():
+def main() -> None:
     """Script entry point."""
     logging.basicConfig(
         filename=__file__.replace(".py", ".log"),
