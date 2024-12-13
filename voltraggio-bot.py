@@ -1,43 +1,46 @@
-# Lorenzo Rossi - https://lorenzoros.si
-# Somewhere in 2019
-# Gotta find an hobby someday
+"""
+Lorenzo Rossi - https://lorenzoros.si - 2024.
 
+Somewhere in year 2019 - Updated at home in year 2024
+Gotta find an hobby someday
+"""
+
+from __future__ import annotations
+
+import logging
 import os
 import re
 import sys
-import ujson
-import logging
 from datetime import datetime
-from telegram import ParseMode, ChatAction
-from telegram.ext import Updater, CommandHandler, CallbackContext, \
-    Filters, MessageHandler
+
+import ujson
+from telegram import ChatAction, ParseMode
+from telegram.ext import (
+    CallbackContext,
+    CommandHandler,
+    Filters,
+    MessageHandler,
+    Updater,
+)
 
 
 class Telegram:
-    """
-    This class contains all the methods and variables needed to control the
-    Telegram bot
-    """
+    """This class contains all the methods and variables needed to control the Telegram bot."""
 
-    def __init__(self):
+    def __init__(self) -> Telegram:
+        """Instantiate the Telegram class."""
         self._settings = {}
         self._settings_path = "src/settings.json"
         self._loadSettings()
 
     def _loadSettings(self):
-        """
-        loads settings from the settings file
-        """
-
+        """Load settings from the settings file."""
         with open(self._settings_path) as json_file:
             # only keeps settings for Telegram, discarding others
             self._settings = ujson.load(json_file)
 
     def _saveSettings(self):
-        """
-        saves settings into file
-        """
-
+        """Save settings into file."""
         with open(self._settings_path) as json_file:
             old_settings = ujson.load(json_file)
 
@@ -45,7 +48,7 @@ class Telegram:
         # with the current settings dict
         old_settings.update(self._settings)
 
-        with open(self._settings_path, 'w') as outfile:
+        with open(self._settings_path, "w") as outfile:
             ujson.dump(old_settings, outfile, indent=2)
 
     # Setters/getters
@@ -80,41 +83,21 @@ class Telegram:
         return self._settings["fish_gif_path"]
 
     def start(self):
-        """
-        starts the bot
-        """
-
-        self._updater = Updater(
-            self._settings["token"],
-            use_context=True
-        )
+        """Start the bot."""
+        self._updater = Updater(self._settings["token"], use_context=True)
         self._dispatcher = self._updater.dispatcher
         self._jobqueue = self._updater.job_queue
 
         self._dispatcher.add_error_handler(self._botError)
         self._jobqueue.run_once(self._botStarted, when=0, name="bot_started")
 
-        self._dispatcher.add_handler(
-            CommandHandler('start', self._botStartCommand)
-        )
-        self._dispatcher.add_handler(
-            CommandHandler('gauss', self._botGaussCommand)
-        )
-        self._dispatcher.add_handler(
-            CommandHandler('stop', self._botStopCommand)
-        )
-        self._dispatcher.add_handler(
-            CommandHandler('ping', self._botPingCommand)
-        )
-        self._dispatcher.add_handler(
-            CommandHandler('reset', self._botResetCommand)
-        )
-        self._dispatcher.add_handler(
-            CommandHandler('stats', self._botStatsCommand)
-        )
-        self._dispatcher.add_handler(
-            MessageHandler(Filters.text, self._botTextMessage)
-        )
+        self._dispatcher.add_handler(CommandHandler("start", self._botStartCommand))
+        self._dispatcher.add_handler(CommandHandler("gauss", self._botGaussCommand))
+        self._dispatcher.add_handler(CommandHandler("stop", self._botStopCommand))
+        self._dispatcher.add_handler(CommandHandler("ping", self._botPingCommand))
+        self._dispatcher.add_handler(CommandHandler("reset", self._botResetCommand))
+        self._dispatcher.add_handler(CommandHandler("stats", self._botStatsCommand))
+        self._dispatcher.add_handler(MessageHandler(Filters.text, self._botTextMessage))
 
         self._updater.start_polling()
         logging.info("Bot started")
@@ -122,78 +105,85 @@ class Telegram:
 
     def _botStarted(self, context: CallbackContext):
         """
-        Function that sends a message to admins whenever the bot is started.
+        Send a message to admins whenever the bot is started.
+
         Callback fired at startup
         """
-
         message = "*Il bot è stato avviato*"
         for chat_id in self._admins:
-            context.bot.send_message(chat_id=chat_id, text=message,
-                                     parse_mode=ParseMode.MARKDOWN)
+            context.bot.send_message(
+                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            )
 
     def _botStartCommand(self, update, context):
         """
-        Function that greets user during first start
+        Greet user during first start.
+
         Callback fired with command /start
         """
-
         chat_id = update.effective_chat.id
         message = "_Sono pronto a correggere chiunque dica boiate_"
-        context.bot.send_message(chat_id=chat_id, text=message,
-                                 parse_mode=ParseMode.MARKDOWN)
+        context.bot.send_message(
+            chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+        )
 
     def _botPingCommand(self, update, context):
         """
-        Function that simply replies "PONG"
+        Simply replies "PONG".
+
         Callback fired with command /ping for debug purposes
         """
-
         chat_id = update.effective_chat.id
         message = "🏓 *PONG* 🏓"
-        context.bot.send_message(chat_id=chat_id, text=message,
-                                 parse_mode=ParseMode.MARKDOWN)
+        context.bot.send_message(
+            chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+        )
 
     def _botResetCommand(self, update, context):
         """
-        Function that resets the bot
+        Reset the bot.
+
         Callback fired with command /reset
         """
-
         chat_id = update.effective_chat.id
         # This works only if the user is an admin
         if chat_id in self._admins:
             message = "_Riavvio in corso..._"
-            context.bot.send_message(chat_id=chat_id, text=message,
-                                     parse_mode=ParseMode.MARKDOWN)
+            context.bot.send_message(
+                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            )
 
             logging.warning("Resetting")
             # System command to reload the python script
-            os.execl(sys.executable, sys.executable, * sys.argv)
+            os.execl(sys.executable, sys.executable, *sys.argv)
         else:
             message = "*Questo comando è solo per admins*"
-            context.bot.send_message(chat_id=chat_id, text=message,
-                                     parse_mode=ParseMode.MARKDOWN)
+            context.bot.send_message(
+                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            )
 
     def _botStopCommand(self, update, context):
         """
-        Function that stops the bot
+        Stop the bot.
+
         Callback fired with command  /stop
         """
-
         chat_id = update.effective_chat.id
         # This works only if the user is an admin
         if chat_id in self._admins:
             message = "_Il bot è stato fermato_"
-            context.bot.send_message(chat_id=chat_id, text=message,
-                                     parse_mode=ParseMode.MARKDOWN)
+            context.bot.send_message(
+                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            )
             self._saveSettings()
             self._updater.stop()
             logging.warning("Bot stopped")
             os._exit()
         else:
             message = "*Questo comando è solo per admins*"
-            context.bot.send_message(chat_id=chat_id, text=message,
-                                     parse_mode=ParseMode.MARKDOWN)
+            context.bot.send_message(
+                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            )
 
     def _botError(self, update, context):
         logging.error(context.error)
@@ -207,11 +197,11 @@ class Telegram:
         for chat_id in self._admins:
             # HECC
             message = "*ERRORE*"
-            context.bot.send_message(chat_id=chat_id, text=message,
-                                     parse_mode=ParseMode.MARKDOWN)
+            context.bot.send_message(
+                chat_id=chat_id, text=message, parse_mode=ParseMode.MARKDOWN
+            )
 
-        error_string = str(context.error).replace(
-            "_", "\\_")  # MARKDOWN escape
+        error_string = str(context.error).replace("_", "\\_")  # MARKDOWN escape
         time_string = datetime.now().isoformat()
 
         message = (
@@ -228,26 +218,25 @@ class Telegram:
 
     def _botGaussCommand(self, update, context):
         """
-        Function that sends a photo of Gauss
-        Callback fired with command  /gauss
-        """
+        Send a photo of Gauss.
 
+        Callback fired with command /gauss
+        """
         chat_id = update.effective_chat.id
-        context.bot.send_chat_action(
-            chat_id=chat_id, action=ChatAction.TYPING)
+        context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
         caption = "*Johann Carl Friedrich Gauß*"
         photo = open(self._image_path, "rb")
-        context.bot.send_photo(chat_id=chat_id, photo=photo,
-                               caption=caption,
-                               parse_mode=ParseMode.MARKDOWN)
+        context.bot.send_photo(
+            chat_id=chat_id, photo=photo, caption=caption, parse_mode=ParseMode.MARKDOWN
+        )
 
     def _botStatsCommand(self, update, context):
         """
-        Function that return stats about the bot
+        Return stats about the bot.
+
         Callback fired with command  /stats
         """
-
         chat_id = update.effective_chat.id
         context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
@@ -265,13 +254,16 @@ class Telegram:
             f"per una media di *{average}* gif al giorno!"
         )
         # Send text message
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=message,
-                                 parse_mode=ParseMode.MARKDOWN)
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=message,
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
     def _botTextMessage(self, update, context):
         """
-        Function that sends the gif
+        Send the gif.
+
         Callback fired with text message
         """
         # skips invalid messages
@@ -285,17 +277,18 @@ class Telegram:
         # trigger_map = list of words that trigger the bot
         for key in self._trigger_map:
             # if key in user_message:
-            if re.search(r'\b' + key + r'\b', user_message):
-                context.bot.send_chat_action(
-                    chat_id=chat_id, action=ChatAction.TYPING)
+            if re.search(r"\b" + key + r"\b", user_message):
+                context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
                 # prepare the message
                 message = f"*SI DICE {self._trigger_map[key]}*"
                 # send the message
                 with open(self._fish_gif_path, "rb") as animation:
                     context.bot.send_animation(
-                        chat_id, animation,
+                        chat_id,
+                        animation,
                         reply_to_message_id=message_id,
-                        caption=message, parse_mode=ParseMode.MARKDOWN
+                        caption=message,
+                        parse_mode=ParseMode.MARKDOWN,
                     )
                 # update the number of sent images
                 self._gif_sent += 1
@@ -303,16 +296,17 @@ class Telegram:
 
 # main entry point
 def main():
+    """Script entry point."""
     logging.basicConfig(
         filename=__file__.replace(".py", ".log"),
         level=logging.INFO,
-        format='%(asctime)s %(levelname)s %(message)s',
-        filemode="w+"
+        format="%(asctime)s %(levelname)s %(message)s",
+        filemode="w+",
     )
 
     t = Telegram()
     t.start()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
