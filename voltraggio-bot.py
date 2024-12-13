@@ -14,7 +14,6 @@ import sys
 from datetime import datetime
 
 import ujson
-from click import Context
 from telegram import Update, constants
 from telegram.ext import (
     Application,
