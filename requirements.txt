@@ -1,2 +1,0 @@
-python-telegram-bot[job-queue]==21.9
-ujson==5.10.0
