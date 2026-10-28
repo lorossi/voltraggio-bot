@@ -314,6 +314,7 @@ class Telegram:
             animation=self._fish_file_id or FISH_PATH,
             caption=caption,
             parse_mode=constants.ParseMode.MARKDOWN,
+            do_quote=True,
         )
         if sent.animation is not None:
             self._fish_file_id = sent.animation.file_id
