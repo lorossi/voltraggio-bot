@@ -1,0 +1,19 @@
+# settings and secrets are mounted at runtime, never baked into the image
+/settings.json
+/data/
+*.log
+nohup.out
+
+# local environments and caches
+.venv
+__pycache__
+*.egg-info
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov/
+
+# repository and editor files
+.git
+.github
+.vscode

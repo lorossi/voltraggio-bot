@@ -1,0 +1,8 @@
+services:
+  voltraggio-bot:
+    build:
+      context: .
+    restart: unless-stopped
+    container_name: voltraggio-bot
+    volumes:
+      - ./data:/app/data
