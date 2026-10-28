@@ -1,4 +1,19 @@
-/src/settings.json
-nohup.out
+# Ignore settings and logs
+/settings.json
+/data/
 *.log
+nohup.out
+
+# VSCode settings
+.vscode
+
+# Python
 .venv
+__pycache__
+.ruff_cache
+*.egg-info
+
+# Python test files
+.coverage
+htmlcov/
+.pytest_cache
